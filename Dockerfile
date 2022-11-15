@@ -1,11 +1,26 @@
-from node:lts as build
-workdir /app
-copy . .
-run mkdir certs && openssl req -x509 -newkey rsa:2048 -sha256 -days 36500 -nodes -keyout certs/privkey.pem -out certs/fullchain.pem -subj '/CN=dialog'
-run npm ci
-from node:lts-slim
-workdir /app
-copy --from=build /app /app
-run apt-get update && apt-get install -y jq curl dnsutils netcat
-copy scripts/docker/run.sh /run.sh
-cmd bash /run.sh
+FROM node:18-alpine
+WORKDIR /dialog
+# RUN apk add python
+RUN apk --no-cache add \
+      bash \
+      g++ \
+      ca-certificates \
+      lz4-dev \
+      musl-dev \
+      cyrus-sasl-dev \
+      openssl-dev \
+      make \
+      python3 \
+      py-pip
+
+RUN apk add --no-cache --virtual .build-deps gcc zlib-dev libc-dev bsd-compat-headers py-setuptools bash linux-headers git
+COPY . .
+# COPY package.json ./
+COPY package.json package-lock.json ./
+RUN git clone https://github.com/python/cpython.git 
+RUN cd ./cpython && ./configure
+# RUN npm install python
+RUN npm install 
+
+EXPOSE 4443
+# CMD ["npm", "start"]
